@@ -38,6 +38,17 @@ Documents (PR3):
 - PDFs are parsed with PyMuPDF, chunked (~900 chars, 150 overlap), embedded via Ollama embeddings (`OLLAMA_EMBED_MODEL`, default `nomic-embed-text`), and stored in `chunks` with pgvector.
 - RAG orchestration will use LangChain in PR4.
 
+Feedback (PR4):
+- Generate feedback: `POST /attempts/{attempt_id}/feedback` as the owning student.
+- Retrieves similar chunks (pgvector) and prompts Ollama (`OLLAMA_CHAT_MODEL`, default `llama3.1`) via LangChain, enforcing strict JSON with citations (filename + page + snippet). If no sources, citations are empty and model must state that explicitly.
+- Test mode (`APP_ENV=test`) avoids LLM calls and returns deterministic feedback using stored chunks.
+
+Hardening (PR5):
+- Basic validation: questionnaire title required; questions require at least one correct option and unique letters.
+- Global error guard returns 500 with logged exception; logging configured to stdout.
+- CORS open for ease of local use (tighten for prod).
+- Evaluation tests: scoring correctness, validation edge cases, feedback output with citations in test mode.
+
 ## Docker
 `docker-compose up --build`
 
@@ -61,9 +72,3 @@ Tests run against an in-memory SQLite database for speed; production uses Postgr
 
 Seeds a “Kinematics Basics” questionnaire with one question and options.
 
-## Roadmap (planned PRs)
-1. ✅ PR1: Scaffold, Docker, migrations, basic CRUD.
-2. PR2: Auth (JWT) + student ownership of attempts.
-3. PR3: Document upload, PDF parsing, chunking, embeddings, pgvector storage.
-4. PR4: Retrieval + AI feedback with strict citations (LangChain).
-5. PR5: Hardening (validation, error handling, logging, evaluation tests).

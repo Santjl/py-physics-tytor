@@ -81,3 +81,37 @@ class DocumentRead(BaseModel):
     filename: str
     status: str
     created_at: Optional[str] = None
+
+
+# Feedback
+class Citation(BaseModel):
+    filename: str
+    page: int
+    snippet: str
+
+
+class StudyRecommendation(BaseModel):
+    title: str
+    why: str
+    citations: List[Citation] = Field(default_factory=list)
+
+
+class PerQuestionFeedback(BaseModel):
+    question_id: int
+    is_correct: bool
+    explanation: str
+    study_recommendations: List[StudyRecommendation] = Field(default_factory=list)
+
+
+class SummaryFeedback(BaseModel):
+    score: float
+    total: int
+    strengths: List[str] = Field(default_factory=list)
+    weaknesses: List[str] = Field(default_factory=list)
+
+
+class FeedbackResponse(BaseModel):
+    attempt_id: int
+    summary: SummaryFeedback
+    per_question: List[PerQuestionFeedback]
+    global_references: List[Citation] = Field(default_factory=list)

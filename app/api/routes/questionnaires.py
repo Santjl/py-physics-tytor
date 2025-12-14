@@ -28,6 +28,8 @@ router = APIRouter(prefix="/questionnaires", tags=["questionnaires"])
 def create_questionnaire(
     payload: QuestionnaireCreate, db: Session = Depends(get_db), _: models.User = Depends(require_admin)
 ):
+    if not payload.title.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Title is required")
     questionnaire = models.Questionnaire(title=payload.title, description=payload.description)
     db.add(questionnaire)
     db.commit()
@@ -57,6 +59,11 @@ def add_question(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Questionnaire not found")
     if not payload.options:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A question requires at least one option")
+    if not any(opt.is_correct for opt in payload.options):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="At least one option must be correct")
+    letters = [opt.letter for opt in payload.options]
+    if len(set(letters)) != len(letters):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Option letters must be unique")
 
     question = models.Question(questionnaire_id=questionnaire_id, statement=payload.statement)
     db.add(question)

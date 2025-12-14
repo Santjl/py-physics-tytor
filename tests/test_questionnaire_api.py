@@ -82,3 +82,41 @@ def test_submit_attempt_scores_correctly(client, admin_user, student_user):
     assert attempt_data["score"] == 1
     assert attempt_data["total"] == 1
     assert attempt_data["answers"][0]["is_correct"] is True
+
+
+def test_question_requires_correct_option_and_unique_letters(client, admin_user):
+    token = _login(client, admin_user.email, "secret")
+    create_resp = client.post(
+        "/questionnaires",
+        json={"title": "Validation", "description": "rules"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    questionnaire_id = create_resp.json()["id"]
+
+    # no correct option
+    resp = client.post(
+        f"/questionnaires/{questionnaire_id}/questions",
+        json={
+            "statement": "Invalid?",
+            "options": [
+                {"letter": "A", "text": "one", "is_correct": False},
+                {"letter": "B", "text": "two", "is_correct": False},
+            ],
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 400
+
+    # duplicate letter
+    resp_dup = client.post(
+        f"/questionnaires/{questionnaire_id}/questions",
+        json={
+            "statement": "Duplicate letters?",
+            "options": [
+                {"letter": "A", "text": "one", "is_correct": True},
+                {"letter": "A", "text": "two", "is_correct": False},
+            ],
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp_dup.status_code == 400
