@@ -1,0 +1,197 @@
+{
+  "info": {
+    "_postman_id": "1c2b5c72-3a1d-4a8a-9f17-111111111111",
+    "name": "Physics Tutor API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Coleção com exemplos de requisições da Physics Tutor API"
+  },
+  "item": [
+    {
+      "name": "Auth - Register (student)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/auth/register",
+          "host": ["{{base_url}}"],
+          "path": ["auth", "register"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"minha_senha_forte\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Auth - Login (form)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/auth/login",
+          "host": ["{{base_url}}"],
+          "path": ["auth", "login"]
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "username", "value": "alice@example.com" },
+            { "key": "password", "value": "minha_senha_forte" }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "Questionnaires - Create (admin)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/questionnaires/",
+          "host": ["{{base_url}}"],
+          "path": ["questionnaires", ""]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Cinemática\",\n  \"description\": \"Movimento retilíneo uniforme\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Questionnaires - List",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/questionnaires/",
+          "host": ["{{base_url}}"],
+          "path": ["questionnaires", ""]
+        }
+      }
+    },
+    {
+      "name": "Questionnaires - Get by id",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/questionnaires/{{questionnaire_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["questionnaires", "{{questionnaire_id}}"]
+        }
+      }
+    },
+    {
+      "name": "Questions - Add to questionnaire (admin)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/questionnaires/{{questionnaire_id}}/questions",
+          "host": ["{{base_url}}"],
+          "path": ["questionnaires", "{{questionnaire_id}}", "questions"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"statement\": \"Qual a aceleração gravitacional na Terra?\",\n  \"options\": [\n    {\"letter\": \"A\", \"text\": \"9,8 m/s²\", \"is_correct\": true},\n    {\"letter\": \"B\", \"text\": \"8,9 m/s²\", \"is_correct\": false},\n    {\"letter\": \"C\", \"text\": \"10 m/s²\", \"is_correct\": false}\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "Questions - List for questionnaire",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/questionnaires/{{questionnaire_id}}/questions",
+          "host": ["{{base_url}}"],
+          "path": ["questionnaires", "{{questionnaire_id}}", "questions"]
+        }
+      }
+    },
+    {
+      "name": "Attempts - Submit (student)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{student_token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/questionnaires/{{questionnaire_id}}/attempts",
+          "host": ["{{base_url}}"],
+          "path": ["questionnaires", "{{questionnaire_id}}", "attempts"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"answers\": [\n    {\"question_id\": 1, \"selected_option_id\": 2},\n    {\"question_id\": 2, \"selected_option_id\": 5}\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "Documents - Upload (admin)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/documents/upload",
+          "host": ["{{base_url}}"],
+          "path": ["documents", "upload"]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "gravity.pdf"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Documents - Get by id (admin)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/documents/{{document_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["documents", "{{document_id}}"]
+        }
+      }
+    }
+  ],
+  "event": [],
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000" },
+    { "key": "admin_token", "value": "<cole-aqui-token-admin>" },
+    { "key": "student_token", "value": "<cole-aqui-token-student>" },
+    { "key": "questionnaire_id", "value": "1" },
+    { "key": "document_id", "value": "1" }
+  ]
+}

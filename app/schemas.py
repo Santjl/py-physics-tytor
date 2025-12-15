@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -80,7 +81,7 @@ class DocumentRead(BaseModel):
     id: int
     filename: str
     status: str
-    created_at: Optional[str] = None
+    created_at: Optional[dt.datetime] = None
 
 
 # Feedback

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 from pgvector.sqlalchemy import Vector
 
 # revision identifiers, used by Alembic.
@@ -16,10 +17,29 @@ depends_on = None
 def upgrade() -> None:
     op.execute("CREATE EXTENSION IF NOT EXISTS vector")
 
-    user_role = sa.Enum("student", "admin", name="user_role")
-    document_status = sa.Enum("pending", "processing", "ready", "failed", name="document_status")
-    user_role.create(op.get_bind(), checkfirst=True)
-    document_status.create(op.get_bind(), checkfirst=True)
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+                CREATE TYPE user_role AS ENUM ('student', 'admin');
+            END IF;
+        END$$;
+        """
+    )
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'document_status') THEN
+                CREATE TYPE document_status AS ENUM ('pending', 'processing', 'ready', 'failed');
+            END IF;
+        END$$;
+        """
+    )
+
+    user_role = postgresql.ENUM("student", "admin", name="user_role", create_type=False)
+    document_status = postgresql.ENUM("pending", "processing", "ready", "failed", name="document_status", create_type=False)
 
     op.create_table(
         "users",
@@ -100,7 +120,7 @@ def upgrade() -> None:
         sa.Column("page", sa.Integer(), nullable=False),
         sa.Column("chunk_index", sa.Integer(), nullable=False),
         sa.Column("text", sa.Text(), nullable=False),
-        sa.Column("embedding", Vector(dimensions=768)),
+    sa.Column("embedding", Vector(768)),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.UniqueConstraint("document_id", "chunk_index", name="uq_chunk_index"),
     )

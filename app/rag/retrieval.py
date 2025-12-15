@@ -4,7 +4,9 @@ import logging
 from typing import List, Sequence
 
 from sqlalchemy import select
+from sqlalchemy import func
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app import models
 from app.core.config import get_settings
@@ -29,9 +31,22 @@ class OllamaEmbeddings:
 def retrieve_chunks(db: Session, query: str, top_k: int = 8) -> Sequence[models.Chunk]:
     settings = get_settings()
     if db.bind and db.bind.dialect.name == "postgresql":
-        query_vec = OllamaEmbeddings().embed_query(query)
-        distance = models.Chunk.embedding.cosine_distance(query_vec)
-        stmt = select(models.Chunk).order_by(distance).limit(top_k)
+        # Skip embedding call if there are no chunks stored
+        has_chunks = db.scalar(select(models.Chunk.id).limit(1))
+        if not has_chunks:
+            return []
+
+        try:
+            query_vec = OllamaEmbeddings().embed_query(query)
+            # Validate embedding shape
+            if not isinstance(query_vec, list) or not all(isinstance(x, (int, float)) for x in query_vec):
+                raise RuntimeError("Embedding response is not a list of numbers")
+        except Exception:
+            logger.exception("Falling back: failed to embed query for retrieval")
+            return db.scalars(select(models.Chunk).order_by(models.Chunk.id).limit(top_k)).all()
+
+        distance_expr = func.cosine_distance(models.Chunk.embedding, query_vec)
+        stmt = select(models.Chunk).order_by(distance_expr).limit(top_k)
         return db.scalars(stmt).all()
 
     # Fallback for tests (SQLite): return earliest chunks for determinism

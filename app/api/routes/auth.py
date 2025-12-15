@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from enum import Enum
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
@@ -18,6 +20,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
+    role: UserRoleEnum
 
 
 class TokenResponse(BaseModel):
@@ -25,10 +28,15 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class UserRoleEnum(str, Enum):
+    student = "student"
+    admin = "admin"
+
+
 class UserRead(BaseModel):
     id: int
     email: EmailStr
-    role: str
+    role: UserRoleEnum
 
     class Config:
         from_attributes = True
@@ -39,7 +47,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
     existing = db.scalar(select(models.User).where(models.User.email == payload.email))
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
-    user = models.User(email=payload.email, password_hash=get_password_hash(payload.password), role="student")
+    user = models.User(email=payload.email, password_hash=get_password_hash(payload.password), role=payload.role)
     db.add(user)
     db.commit()
     db.refresh(user)

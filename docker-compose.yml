@@ -11,6 +11,12 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d quiz_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   api:
     build: .
@@ -21,13 +27,40 @@ services:
       OLLAMA_CHAT_MODEL: llama3.1
       OLLAMA_EMBED_MODEL: nomic-embed-text
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
     ports:
       - "8000:8000"
     volumes:
       - .:/app
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  migrations:
+    build: .
+    command: ["sh", "-c", "alembic upgrade head"]
+    environment:
+      APP_ENV: dev
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/quiz_db
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    restart: "no"
+
+  adminer:
+    image: adminer:4.8.1
+    depends_on:
+      - db
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+      ADMINER_DESIGN: pepa-linha
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
 
 volumes:
   pgdata: {}

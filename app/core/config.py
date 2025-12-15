@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     ollama_chat_model: str = "llama3.1"
     ollama_embed_model: str = "nomic-embed-text"
     secret_key: str = "change-me"
-    access_token_expire_minutes: int = 60
+    access_token_expire_hours: int = 24
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
