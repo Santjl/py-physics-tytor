@@ -6,6 +6,8 @@ from typing import List, Sequence
 from sqlalchemy import select
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from sqlalchemy import func, cast
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import func
 
 from app import models
@@ -45,7 +47,11 @@ def retrieve_chunks(db: Session, query: str, top_k: int = 8) -> Sequence[models.
             logger.exception("Falling back: failed to embed query for retrieval")
             return db.scalars(select(models.Chunk).order_by(models.Chunk.id).limit(top_k)).all()
 
-        distance_expr = func.cosine_distance(models.Chunk.embedding, query_vec)
+        # Normalize query vector size and type to avoid pgvector errors
+        dim = models.EmbeddingType.dimensions
+        if len(query_vec) != dim:
+            query_vec = (query_vec + [0.0] * dim)[:dim]
+        distance_expr = func.cosine_distance(models.Chunk.embedding, cast(query_vec, Vector(dim)))
         stmt = select(models.Chunk).order_by(distance_expr).limit(top_k)
         return db.scalars(stmt).all()
 

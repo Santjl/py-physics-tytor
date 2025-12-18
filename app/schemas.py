@@ -40,6 +40,10 @@ class QuestionnaireCreate(BaseModel):
     description: Optional[str] = None
 
 
+class QuestionnaireWithQuestionsCreate(QuestionnaireCreate):
+    questions: List[QuestionCreate] = Field(default_factory=list)
+
+
 class QuestionnaireRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
