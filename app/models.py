@@ -28,6 +28,7 @@ class EmbeddingType(TypeDecorator):
 
 UserRole = Enum("student", "admin", name="user_role")
 DocumentStatus = Enum("pending", "processing", "ready", "failed", name="document_status")
+ChunkType = Enum("theory", "exercise", "unknown", name="chunk_type")
 
 
 class User(Base):
@@ -134,6 +135,9 @@ class Chunk(Base):
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     embedding: Mapped[Optional[list[float]]] = mapped_column(EmbeddingType(), nullable=True)
+    chunk_type: Mapped[str] = mapped_column(ChunkType, default="unknown", nullable=False)
+    chapter_title: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    section_title: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     document: Mapped["Document"] = relationship(back_populates="chunks")

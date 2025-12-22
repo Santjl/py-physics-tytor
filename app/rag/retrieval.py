@@ -30,6 +30,21 @@ class OllamaEmbeddings:
         return self.client.embed([text])[0]
 
 
+def _filter_by_chunk_type(
+    db: Session,
+    base_stmt,
+    top_k: int,
+) -> Sequence[models.Chunk]:
+    def _run(chunk_type: str) -> Sequence[models.Chunk]:
+        stmt = base_stmt.where(models.Chunk.chunk_type == chunk_type).limit(top_k)
+        return db.scalars(stmt).all()
+
+    results = _run("theory")
+    if results:
+        return results
+    return _run("unknown")
+
+
 def retrieve_chunks(db: Session, query: str, top_k: int = 8) -> Sequence[models.Chunk]:
     settings = get_settings()
     if db.bind and db.bind.dialect.name == "postgresql":
@@ -45,15 +60,17 @@ def retrieve_chunks(db: Session, query: str, top_k: int = 8) -> Sequence[models.
                 raise RuntimeError("Embedding response is not a list of numbers")
         except Exception:
             logger.exception("Falling back: failed to embed query for retrieval")
-            return db.scalars(select(models.Chunk).order_by(models.Chunk.id).limit(top_k)).all()
+            base_stmt = select(models.Chunk).order_by(models.Chunk.id)
+            return _filter_by_chunk_type(db, base_stmt, top_k)
 
         # Normalize query vector size and type to avoid pgvector errors
         dim = models.EmbeddingType.dimensions
         if len(query_vec) != dim:
             query_vec = (query_vec + [0.0] * dim)[:dim]
         distance_expr = func.cosine_distance(models.Chunk.embedding, cast(query_vec, Vector(dim)))
-        stmt = select(models.Chunk).order_by(distance_expr).limit(top_k)
-        return db.scalars(stmt).all()
+        base_stmt = select(models.Chunk).order_by(distance_expr)
+        return _filter_by_chunk_type(db, base_stmt, top_k)
 
     # Fallback for tests (SQLite): return earliest chunks for determinism
-    return db.scalars(select(models.Chunk).order_by(models.Chunk.id).limit(top_k)).all()
+    base_stmt = select(models.Chunk).order_by(models.Chunk.id)
+    return _filter_by_chunk_type(db, base_stmt, top_k)

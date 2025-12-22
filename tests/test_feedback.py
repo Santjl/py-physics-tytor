@@ -34,12 +34,12 @@ def test_feedback_returns_citations(client, admin_user, student_user, db_session
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     question = question_resp.json()
-    correct_option_id = next(o["id"] for o in question["options"] if o["is_correct"])
+    incorrect_option_id = next(o["id"] for o in question["options"] if not o["is_correct"])
 
     # Submit attempt
     attempt_resp = client.post(
         f"/questionnaires/{qid}/attempts",
-        json={"answers": [{"question_id": question["id"], "selected_option_id": correct_option_id}]},
+        json={"answers": [{"question_id": question["id"], "selected_option_id": incorrect_option_id}]},
         headers={"Authorization": f"Bearer {student_token}"},
     )
     attempt_id = attempt_resp.json()["attempt_id"]
@@ -66,7 +66,7 @@ def test_feedback_returns_citations(client, admin_user, student_user, db_session
     assert feedback_resp.status_code == 200, feedback_resp.text
     data = feedback_resp.json()
     assert data["attempt_id"] == attempt_id
-    assert data["per_question"][0]["study_recommendations"][0]["citations"]
-    citation = data["per_question"][0]["study_recommendations"][0]["citations"][0]
-    assert citation["filename"] == "study.pdf"
-    assert citation["page"] == 1
+    assert data["per_question"][0]["study"]
+    study_item = data["per_question"][0]["study"][0]
+    assert study_item["filename"] == "study.pdf"
+    assert 1 in study_item["pages"]

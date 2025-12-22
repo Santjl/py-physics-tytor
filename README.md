@@ -37,10 +37,11 @@ Documents (PR3):
 - Check status: `GET /documents/{id}`.
 - PDFs are parsed with PyMuPDF, chunked (~900 chars, 150 overlap), embedded via Ollama embeddings (`OLLAMA_EMBED_MODEL`, default `nomic-embed-text`), and stored in `chunks` with pgvector.
 - RAG orchestration will use LangChain in PR4.
+- Each chunk is classified as `theory`, `exercise`, or `unknown` during ingestion (simple keyword heuristics) and optional chapter/section titles are stored when detected.
 
 Feedback (PR4):
 - Generate feedback: `POST /attempts/{attempt_id}/feedback` as the owning student.
-- Retrieves similar chunks (pgvector) and prompts Ollama (`OLLAMA_CHAT_MODEL`, default `llama3.1`) via LangChain, enforcing strict JSON with citations (filename + page + snippet). If no sources, citations are empty and model must state that explicitly.
+- Retrieves similar chunks (pgvector) from theory-only content and prompts Ollama (`OLLAMA_CHAT_MODEL`, default `llama3.1`). If no theory chunks are available, it can fall back to `unknown` but never to exercises.
 - Test mode (`APP_ENV=test`) avoids LLM calls and returns deterministic feedback using stored chunks.
 
 Hardening (PR5):
@@ -71,4 +72,3 @@ Tests run against an in-memory SQLite database for speed; production uses Postgr
 `python scripts/seed_sample.py`
 
 Seeds a “Kinematics Basics” questionnaire with one question and options.
-

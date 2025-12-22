@@ -95,17 +95,17 @@ class Citation(BaseModel):
     snippet: str
 
 
-class StudyRecommendation(BaseModel):
-    title: str
-    why: str
-    citations: List[Citation] = Field(default_factory=list)
+class StudyItem(BaseModel):
+    filename: str
+    pages: List[int] = Field(default_factory=list)
+    chapter: Optional[str] = None
 
 
 class PerQuestionFeedback(BaseModel):
     question_id: int
     is_correct: bool
     explanation: str
-    study_recommendations: List[StudyRecommendation] = Field(default_factory=list)
+    study: List[StudyItem] = Field(default_factory=list)
 
 
 class SummaryFeedback(BaseModel):
