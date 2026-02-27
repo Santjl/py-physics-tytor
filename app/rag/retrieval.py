@@ -110,7 +110,8 @@ def mmr_rerank(
 
     embed_cache: dict[int, np.ndarray] = {}
     for chunk in chunks:
-        emb = np.array(chunk.embedding or [0.0] * len(query_vec), dtype=np.float32)
+        raw = chunk.embedding if chunk.embedding is not None else [0.0] * len(query_vec)
+        emb = np.array(raw, dtype=np.float32)
         norm = np.linalg.norm(emb)
         embed_cache[chunk.id] = emb / norm if norm > 0 else emb
 
@@ -170,6 +171,11 @@ def _filter_chunks_by_type(chunks: list[models.Chunk]) -> list[models.Chunk]:
     if theory:
         return theory
     return [c for c in chunks if c.chunk_type != "exercise"]
+
+
+def _filter_exercise_chunks(chunks: list[models.Chunk]) -> list[models.Chunk]:
+    """In-memory chunk-type filtering: keep only exercise chunks."""
+    return [c for c in chunks if c.chunk_type == "exercise"]
 
 
 # ---------------------------------------------------------------------------
@@ -233,3 +239,67 @@ def retrieve_chunks(db: Session, query: str, top_k: int = 8) -> Sequence[models.
     # Fallback for tests (SQLite): return earliest chunks for determinism
     base_stmt = select(models.Chunk).order_by(models.Chunk.id)
     return _filter_by_chunk_type(db, base_stmt, top_k)
+
+
+def retrieve_exercise_chunks(db: Session, query: str, top_k: int = 2) -> Sequence[models.Chunk]:
+    """Retrieve exercise-type chunks relevant to the given query."""
+    settings = get_settings()
+
+    if db.bind and db.bind.dialect.name == "postgresql":
+        has_chunks = db.scalar(
+            select(models.Chunk.id).where(models.Chunk.chunk_type == "exercise").limit(1)
+        )
+        if not has_chunks:
+            return []
+
+        try:
+            query_vec = OllamaEmbeddings().embed_query(query)
+            if not isinstance(query_vec, list) or not all(isinstance(x, (int, float)) for x in query_vec):
+                raise RuntimeError("Embedding response is not a list of numbers")
+        except Exception:
+            logger.exception("Failed to embed query for exercise retrieval")
+            return []
+
+        dim = models.EmbeddingType.dimensions
+        if len(query_vec) != dim:
+            query_vec = (query_vec + [0.0] * dim)[:dim]
+
+        candidate_count = top_k * settings.retrieval_candidate_multiplier
+
+        # 1. Dual retrieval
+        semantic_ranks = _semantic_search(db, query_vec, candidate_count)
+        bm25_ranks = _bm25_search(db, query, candidate_count, settings.retrieval_fts_config)
+
+        # 2. Fuse via RRF
+        fused = reciprocal_rank_fusion(
+            semantic_ranks,
+            bm25_ranks,
+            settings.retrieval_semantic_weight,
+            settings.retrieval_bm25_weight,
+            settings.retrieval_rrf_k,
+        )
+
+        candidate_ids = [chunk_id for chunk_id, _ in fused[:candidate_count]]
+        if not candidate_ids:
+            return []
+
+        candidate_chunks = list(
+            db.scalars(select(models.Chunk).where(models.Chunk.id.in_(candidate_ids))).all()
+        )
+
+        # Filter to exercise only
+        pool = _filter_exercise_chunks(candidate_chunks)
+        if not pool:
+            return []
+
+        fused_scores = dict(fused)
+        return mmr_rerank(pool, query_vec, fused_scores, settings.retrieval_mmr_lambda, top_k)
+
+    # Fallback for tests (SQLite)
+    stmt = (
+        select(models.Chunk)
+        .where(models.Chunk.chunk_type == "exercise")
+        .order_by(models.Chunk.id)
+        .limit(top_k)
+    )
+    return list(db.scalars(stmt).all())

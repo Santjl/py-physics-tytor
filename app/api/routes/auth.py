@@ -59,7 +59,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     user = db.scalar(select(models.User).where(models.User.email == form_data.username))
     if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    token = create_access_token({"sub": str(user.id), "role": user.role})
+    token = create_access_token({"sub": str(user.id), "role": user.role, "email": user.email})
     return TokenResponse(access_token=token)
 
 

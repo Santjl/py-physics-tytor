@@ -99,12 +99,22 @@ class StudyItem(BaseModel):
     filename: str
     pages: List[int] = Field(default_factory=list)
     chapter: Optional[str] = None
+    topic: Optional[str] = None
+
+
+class SimilarExercise(BaseModel):
+    filename: str
+    page: int
+    description: Optional[str] = None
 
 
 class PerQuestionFeedback(BaseModel):
     question_id: int
     is_correct: bool
     explanation: str
+    misconception: Optional[str] = None
+    tip: Optional[str] = None
+    similar_question: Optional[SimilarExercise] = None
     study: List[StudyItem] = Field(default_factory=list)
 
 

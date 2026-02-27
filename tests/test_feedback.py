@@ -66,7 +66,14 @@ def test_feedback_returns_citations(client, admin_user, student_user, db_session
     assert feedback_resp.status_code == 200, feedback_resp.text
     data = feedback_resp.json()
     assert data["attempt_id"] == attempt_id
-    assert data["per_question"][0]["study"]
-    study_item = data["per_question"][0]["study"][0]
+    pq = data["per_question"][0]
+    assert pq["study"]
+    study_item = pq["study"][0]
     assert study_item["filename"] == "study.pdf"
     assert 1 in study_item["pages"]
+    # New fields populated with defaults in test mode
+    assert pq["misconception"] is not None
+    assert pq["tip"] is not None
+    assert pq["similar_question"] is not None
+    assert pq["similar_question"]["filename"] == "study.pdf"
+    assert pq["similar_question"]["page"] == 1

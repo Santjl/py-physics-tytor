@@ -96,6 +96,7 @@ class Attempt(Base):
     questionnaire: Mapped["Questionnaire"] = relationship(back_populates="attempts")
     student: Mapped[Optional["User"]] = relationship(back_populates="attempts")
     answers: Mapped[List["Answer"]] = relationship(back_populates="attempt", cascade="all, delete-orphan")
+    feedback: Mapped[Optional["AttemptFeedback"]] = relationship(back_populates="attempt", uselist=False, cascade="all, delete-orphan")
 
 
 class Answer(Base):
@@ -145,3 +146,14 @@ class Chunk(Base):
     __table_args__ = (
         UniqueConstraint("document_id", "chunk_index", name="uq_chunk_index"),
     )
+
+
+class AttemptFeedback(Base):
+    __tablename__ = "attempt_feedbacks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    attempt_id: Mapped[int] = mapped_column(ForeignKey("attempts.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    data: Mapped[dict] = mapped_column(JSON, nullable=False)
+    generated_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    attempt: Mapped["Attempt"] = relationship(back_populates="feedback")
